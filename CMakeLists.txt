@@ -35,7 +35,7 @@ target_link_libraries(renderer PRIVATE spdlog::spdlog)
 
 
 if (NOT PROF)
-  target_sources(renderer PRIVATE src/render.hpp src/render.cu)
+  target_sources(renderer PRIVATE src/render.hpp src/render.cu src/render.cpp)
   set_target_properties(renderer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
   add_library(render_cpu_ref SHARED IMPORTED)
@@ -61,9 +61,9 @@ endif()
 
 
 
-add_executable(mandel src/mandel.cpp)
-target_compile_features(mandel PUBLIC cxx_std_17)
-target_link_libraries(mandel PRIVATE render_cpu_ref PNG::PNG CLI11::CLI11 spdlog::spdlog renderer)
+add_executable(detect src/detect.cpp)
+target_compile_features(detect PUBLIC cxx_std_17)
+target_link_libraries(detect PRIVATE render_cpu_ref PNG::PNG CLI11::CLI11 spdlog::spdlog renderer)
 
 add_executable(bench src/bench.cpp)
 target_compile_features(bench PUBLIC cxx_std_17)
