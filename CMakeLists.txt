@@ -1,10 +1,9 @@
 cmake_minimum_required (VERSION 3.14)
 project (GPGPU CUDA CXX)
 
-option(PROF "Reference build" NO)
 include(FetchContent)
 
-
+# Download external dependencies
 FetchContent_Declare(
   CLI11
   URL https://github.com/CLIUtils/CLI11/archive/v1.9.1.tar.gz
@@ -15,18 +14,31 @@ FetchContent_Declare(
   URL https://github.com/gabime/spdlog/archive/v1.9.2.tar.gz
   )
 
-
 FetchContent_MakeAvailable(spdlog)
 FetchContent_MakeAvailable(CLI11)
 
+# Create data Dir and download videos
+file(DOWNLOAD "https://cloud.lrde.epita.fr/s/oE5t9TpweK3cDBj/download?path=&files=Aled.mp4" "data/Aled.mp4")
+
+# Check all packages are available
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR} )
 find_package(PNG REQUIRED)
 find_package(TBB REQUIRED)
 find_package(benchmark REQUIRED)
 
+# Define the build flags
 set(CMAKE_CUDA_ARCHITECTURES "75")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+
+# Debug mode
+# You must run `cmake -DCMAKE_BUILD_TYPE=Debug ..`
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+  set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
+  message(">>> Building in debug mode ! <<<")
+endif()
+
 
 
 add_library(renderer)
@@ -34,33 +46,15 @@ target_compile_features(renderer PUBLIC cxx_std_14)
 target_link_libraries(renderer PRIVATE spdlog::spdlog)
 
 
-if (NOT PROF)
-  target_sources(renderer PRIVATE src/render.hpp src/render.cu src/render.cpp)
-  set_target_properties(renderer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_sources(renderer PRIVATE src/render.hpp src/render.cu src/render.cpp)
+set_target_properties(renderer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-  add_library(render_cpu_ref SHARED IMPORTED)
-  target_link_libraries(render_cpu_ref INTERFACE tbb)
-  set_target_properties(render_cpu_ref PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/librender_cpu_ref.so)
-else()
-  target_sources(renderer PRIVATE src/render.hpp src/render_prof.cu)
-  set_target_properties(renderer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-  add_library(render_cpu_ref SHARED IMPORTED)
-  target_link_libraries(render_cpu_ref INTERFACE tbb)
-  set_target_properties(render_cpu_ref PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/librender_cpu_ref.so)
-
-  # Uncomment to regenerate the reference
-  #add_library(render_cpu_ref SHARED src/render.hpp src/render_cpu.cpp)
-  #target_link_libraries(render_cpu_ref PRIVATE tbb)
-  #target_link_libraries(render_cpu_ref PRIVATE "-s" "-nostdlib")
-  #target_compile_features(render_cpu_ref PRIVATE cxx_std_17)
-  #target_compile_options(render_cpu_ref PRIVATE "-fno-rtti" "-fno-cxx-exceptions")
-  #target_compile_options(render_cpu_ref PRIVATE "-mavx")
-endif()
+add_library(render_cpu_ref SHARED IMPORTED)
+target_link_libraries(render_cpu_ref INTERFACE tbb)
+set_target_properties(render_cpu_ref PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/librender_cpu_ref.so)
 
 
-
-
+### Create the executable ###
 add_executable(detect src/detect.cpp)
 target_compile_features(detect PUBLIC cxx_std_17)
 target_link_libraries(detect PRIVATE render_cpu_ref PNG::PNG CLI11::CLI11 spdlog::spdlog renderer)
