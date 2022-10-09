@@ -9,8 +9,8 @@ DEFAULT_EXPORT_DIR = "build/data/export"
 
 # Parse file arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("video", help="Video path to convert from MP4 to JPG", default=DEFAULT_VIDEO, nargs="?")
-parser.add_argument("export_directory", help="The path of the folder that will contain the converted images", default=DEFAULT_EXPORT_DIR, nargs="?")
+parser.add_argument("--video", help="Video path to convert from MP4 to JPG", default=DEFAULT_VIDEO, nargs="?")
+parser.add_argument("--export_directory", help="The path of the folder that will contain the converted images", default=DEFAULT_EXPORT_DIR, nargs="?")
 
 args = parser.parse_args()
 video_path = args.video
