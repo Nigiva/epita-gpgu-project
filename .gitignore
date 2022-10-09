@@ -1,3 +1,6 @@
+# Data directory
+data/*
+
 # Prerequisites
 *.d
 
