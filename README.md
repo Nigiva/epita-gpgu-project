@@ -12,9 +12,17 @@ The goal of the project is to implement a simple object detector in CUDA.
 | Hao Ye           | hao.ye                    | `Enjoyshi`     |
 | Arthur Fan       | arthur.fan                | `arthur942`    |
 
-## C) How to install the virtual environment
+## C) How to run the project
 
-TODO
+```
+$ cmake ..
+$ make all -j
+```
+
+Building in debug mode : 
+```
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+```
 
 ## D) Project structure
 
