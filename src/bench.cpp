@@ -5,7 +5,6 @@
 constexpr int kRGBASize = 4;
 constexpr int width = 4800;
 constexpr int height = 3200;
-constexpr int niteration = 1000;
 
 void BM_Rendering_cpu(benchmark::State& st)
 {
@@ -13,7 +12,7 @@ void BM_Rendering_cpu(benchmark::State& st)
   std::vector<char> data(height * stride);
 
   for (auto _ : st)
-    render_cpu(data.data(), width, height, stride, niteration);
+    render_cpu(data.data(), width, height, stride);
 
   st.counters["frame_rate"] = benchmark::Counter(st.iterations(), benchmark::Counter::kIsRate);
 }
@@ -24,7 +23,7 @@ void BM_Rendering_gpu(benchmark::State& st)
   std::vector<char> data(height * stride);
 
   for (auto _ : st)
-    render(data.data(), width, height, stride, niteration);
+    render(data.data(), width, height, stride);
 
   st.counters["frame_rate"] = benchmark::Counter(st.iterations(), benchmark::Counter::kIsRate);
 }

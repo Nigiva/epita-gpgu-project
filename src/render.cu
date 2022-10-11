@@ -14,12 +14,6 @@ void _abortError(const char* msg, const char* fname, int line)
 #define abortError(msg) _abortError(msg, __FUNCTION__, __LINE__)
 
 
-struct rgba8_t {
-  std::uint8_t r;
-  std::uint8_t g;
-  std::uint8_t b;
-  std::uint8_t a;
-};
 
 rgba8_t heat_lut(float x)
 {
@@ -69,7 +63,7 @@ __global__ void mykernel(char* buffer, int width, int height, size_t pitch)
   lineptr[x] = {grayv, grayv, grayv, 255};
 }
 
-void render(char* hostBuffer, int width, int height, std::ptrdiff_t stride, int n_iterations)
+void render(char* hostBuffer, int width, int height, std::ptrdiff_t stride)
 {
   cudaError_t rc = cudaSuccess;
 

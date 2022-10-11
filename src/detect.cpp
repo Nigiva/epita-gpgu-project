@@ -52,7 +52,7 @@ void write_png(const std::byte* buffer,
 }
 
 
-// Usage: ./mandel
+// Usage: ./detect
 int main(int argc, char** argv)
 {
   (void) argc;
@@ -61,12 +61,10 @@ int main(int argc, char** argv)
   std::string filename = "output.png";
   std::string mode = "GPU";
   int width = 4800;
-  int height = 3200;
-  int niter = 100;
+  int height = 3200;;
 
-  CLI::App app{"mandel"};
+  CLI::App app{"detect"};
   app.add_option("-o", filename, "Output image");
-  app.add_option("niter", niter, "number of iteration");
   app.add_option("width", width, "width of the output image");
   app.add_option("height", height, "height of the output image");
   app.add_set("-m", mode, {"GPU", "CPU"}, "Either 'GPU' or 'CPU'");
@@ -79,14 +77,14 @@ int main(int argc, char** argv)
   auto buffer = std::make_unique<std::byte[]>(height * stride);
 
   // Rendering
-  spdlog::info("Runnging {} mode with (w={},h={},niter={}).", mode, width, height, niter);
+  spdlog::info("Runnging {} mode with (w={},h={}).", mode, width, height);
   if (mode == "CPU")
   {
-    render_cpu(reinterpret_cast<char*>(buffer.get()), width, height, stride, niter);
+    render_cpu(reinterpret_cast<char*>(buffer.get()), width, height, stride);
   }
   else if (mode == "GPU")
   {
-    render(reinterpret_cast<char*>(buffer.get()), width, height, stride, niter);
+    render(reinterpret_cast<char*>(buffer.get()), width, height, stride);
   }
 
   // Save
