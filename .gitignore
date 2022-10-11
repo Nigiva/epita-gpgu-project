@@ -1,3 +1,9 @@
+# IDE
+.vscode/*
+
+# Data directory
+data/*
+
 # Prerequisites
 *.d
 
