@@ -15,7 +15,7 @@ struct rgba8_t {
 /// \param width Image width
 /// \param height Image height
 /// \param stride Number of bytes between two lines
-void render_cpu(char* buffer, int width, int height, std::ptrdiff_t stride);
+void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);
 
 
 
@@ -23,4 +23,4 @@ void render_cpu(char* buffer, int width, int height, std::ptrdiff_t stride);
 /// \param width Image width
 /// \param height Image height
 /// \param stride Number of bytes between two lines
-void render(char* buffer, int width, int height, std::ptrdiff_t stride);
+void render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);

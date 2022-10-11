@@ -7,8 +7,75 @@
 #include <spdlog/spdlog.h>
 #include "render.hpp"
 
+char* read_png(const char*filename,
+                    int* file_width,
+                    int* file_height,
+                    int* file_stride)
+{
+  // read the file
+  FILE *fp = fopen(filename, "rb");
 
-void write_png(const std::byte* buffer,
+  png_byte bit_depth;
+  png_byte color_type;
+  png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  png_infop info = png_create_info_struct(png);
+  png_init_io(png, fp);
+  png_read_info(png, info);
+
+  int width = png_get_image_width(png, info);
+  if (file_width != NULL)
+      *file_width = width;
+  int height = png_get_image_height(png, info);
+  if (file_height != NULL)
+      *file_height = height;
+  color_type = png_get_color_type(png, info);
+  bit_depth = png_get_bit_depth(png, info);
+
+  if(color_type == PNG_COLOR_TYPE_PALETTE)
+      png_set_palette_to_rgb(png);
+  if(color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+      png_set_expand_gray_1_2_4_to_8(png);
+  if(png_get_valid(png, info, PNG_INFO_tRNS))
+      png_set_tRNS_to_alpha(png);
+  if(color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)
+      png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
+  if(color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+      png_set_gray_to_rgb(png);
+
+  png_read_update_info(png, info);
+
+  int numchan = 4;
+  if (file_stride != NULL)
+      *file_stride = height * numchan;
+
+  // Set up row pointer
+  png_bytep *row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * height);
+  int i, j;
+  for (i = 0; i < height; i++)
+      row_pointers[i] = (png_bytep)malloc(png_get_rowbytes(png,info));
+  png_read_image(png, row_pointers);
+
+  // Put row pointers data into image
+  unsigned char *image = (unsigned char *) malloc (numchan*width*height);
+  int count = 0;
+  for (i = 0 ; i < height ; i++)
+  {
+      for (j = 0 ; j < numchan*width ; j++)
+      {
+          image[count] = row_pointers[i][j];
+          count += 1;
+      }
+  }
+  fclose(fp);
+  for (i = 0; i < height; i++)
+      free(row_pointers[i]);
+  free(row_pointers);
+
+  return reinterpret_cast<char*>(image);
+}
+
+
+void write_png(char* buffer,
                int width,
                int height,
                int stride,
@@ -58,37 +125,44 @@ int main(int argc, char** argv)
   (void) argc;
   (void) argv;
 
-  std::string filename = "output.png";
-  std::string mode = "GPU";
-  int width = 4800;
-  int height = 3200;;
+  std::string reference_filename;
+  std::vector<std::string> images_filename;
+  std::string mode;
 
   CLI::App app{"detect"};
-  app.add_option("-o", filename, "Output image");
-  app.add_option("width", width, "width of the output image");
-  app.add_option("height", height, "height of the output image");
+  app.add_option("reference", reference_filename, "reference image")->required()->check(CLI::ExistingFile);
+  app.add_option("inputs", images_filename, "input images")->required()->check(CLI::ExistingFile);
   app.add_set("-m", mode, {"GPU", "CPU"}, "Either 'GPU' or 'CPU'");
 
   CLI11_PARSE(app, argc, argv);
 
+  //json::value result;
+
   // Create buffer
-  constexpr int kRGBASize = 4;
-  int stride = width * kRGBASize;
-  auto buffer = std::make_unique<std::byte[]>(height * stride);
+  int width;
+  int height;
+  int stride;
+  char* ref_buffer = read_png(reference_filename.c_str(), &width, &height, &stride);
+  write_png(ref_buffer, width, height, stride, "output42.png");
+
+  char* img_buffer;
 
   // Rendering
   spdlog::info("Runnging {} mode with (w={},h={}).", mode, width, height);
-  if (mode == "CPU")
+  for (int i = 0; i < images_filename.size(); i += 1)
   {
-    render_cpu(reinterpret_cast<char*>(buffer.get()), width, height, stride);
-  }
-  else if (mode == "GPU")
-  {
-    render(reinterpret_cast<char*>(buffer.get()), width, height, stride);
+    img_buffer = read_png(images_filename[i].c_str(), NULL, NULL, NULL);
+
+    if (mode == "CPU")
+    {
+      render_cpu(ref_buffer, width, height, stride, img_buffer);
+    }
+    else if (mode == "GPU")
+    {
+      render(ref_buffer, width, height, stride, img_buffer);
+    }
   }
 
-  // Save
-  write_png(buffer.get(), width, height, stride, filename.c_str());
-  spdlog::info("Output saved in {}.", filename);
+  //std::cout << result.asString() << "\n";
 }
 

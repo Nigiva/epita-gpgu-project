@@ -7,6 +7,6 @@ void gray_scale(char* hostBuffer, int width, int height, std::ptrdiff_t stride){
 
 }
 
-void render_cpu(char* hostBuffer, int width, int height, std::ptrdiff_t stride)
+void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
 {
 }
