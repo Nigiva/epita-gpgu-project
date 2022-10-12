@@ -46,7 +46,7 @@ char* read_png(const char*filename,
 
   int numchan = 4;
   if (file_stride != NULL)
-      *file_stride = height * numchan;
+      *file_stride = weight * numchan;
 
   // Set up row pointer
   png_bytep *row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * height);
