@@ -10,6 +10,7 @@ struct rgba8_t {
   std::uint8_t a;
 };
 
+void gray_scale(char* buffer, int width, int height, int stride);
 
 /// \param buffer The RGBA24 image buffer
 /// \param width Image width

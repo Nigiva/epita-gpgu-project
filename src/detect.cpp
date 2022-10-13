@@ -144,7 +144,7 @@ int main(int argc, char** argv)
   int height;
   int stride;
   char* ref_buffer = read_png(reference_filename.c_str(), &width, &height, &stride);
-  gray_scale(ref_buffer, width, height);
+  gray_scale(ref_buffer, width, height, stride);
   write_png(ref_buffer, width, height, stride, "output42.png");
 
   char* img_buffer;
