@@ -2,7 +2,6 @@
 #include <memory>
 
 #include <png.h>
-
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
 #include "render.hpp"
@@ -31,6 +30,8 @@ char* read_png(const char*filename,
   color_type = png_get_color_type(png, info);
   bit_depth = png_get_bit_depth(png, info);
 
+  if(bit_depth == 16)
+    png_set_strip_16(png);
   if(color_type == PNG_COLOR_TYPE_PALETTE)
       png_set_palette_to_rgb(png);
   if(color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
@@ -46,7 +47,7 @@ char* read_png(const char*filename,
 
   int numchan = 4;
   if (file_stride != NULL)
-      *file_stride = weight * numchan;
+      *file_stride = width * numchan;
 
   // Set up row pointer
   png_bytep *row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * height);
@@ -71,7 +72,7 @@ char* read_png(const char*filename,
       free(row_pointers[i]);
   free(row_pointers);
 
-  return reinterpret_cast<char*>(image);
+  return (char*)(image);
 }
 
 
@@ -143,6 +144,7 @@ int main(int argc, char** argv)
   int height;
   int stride;
   char* ref_buffer = read_png(reference_filename.c_str(), &width, &height, &stride);
+  gray_scale(ref_buffer, width, height);
   write_png(ref_buffer, width, height, stride, "output42.png");
 
   char* img_buffer;
