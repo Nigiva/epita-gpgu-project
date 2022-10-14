@@ -1,3 +1,5 @@
+#include "utils.hpp"
+
 void gaussian_kernel(double *kernel, double sigma, int size){
   double r, s = 2.0 * sigma * sigma;
   double sum = 0.0;
