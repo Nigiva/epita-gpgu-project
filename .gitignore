@@ -39,3 +39,9 @@ data/*
 
 #build
 build/*
+
+# venv
+.venv
+
+# Macos Ds file
+.DS_Store
