@@ -12,6 +12,7 @@ struct rgba8_t {
 
 void gray_scale(char* buffer, int width, int height, int stride);
 
+void gaussian_blur(char* buffer, int width, int height, int stride);
 /// \param buffer The RGBA24 image buffer
 /// \param width Image width
 /// \param height Image height
