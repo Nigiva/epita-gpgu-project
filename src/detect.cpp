@@ -145,7 +145,7 @@ int main(int argc, char** argv)
   int stride;
   char* ref_buffer = read_png(reference_filename.c_str(), &width, &height, &stride);
   gray_scale(ref_buffer, width, height, stride);
-  gaussian_blur(ref_buffer, width, height, stride);
+  gaussian_blur(ref_buffer, width, height, stride, 5);
   write_png(ref_buffer, width, height, stride, "output42.png");
 
   char* img_buffer;

@@ -18,30 +18,35 @@ void gray_scale(char* buffer, int width, int height, int stride){
   }
 }
 
-void gaussian_blur(char* buffer, int width, int height, int stride){  
+void gaussian_blur(char* buffer, int width, int height, int stride, int kernel_size){  
   
-  int size = 3;
   double sigma = 1.0;
-  double* kernel = (double*)malloc(sizeof(double) * size * size);
-  gaussian_kernel(kernel, sigma, size);
+  double* kernel = (double*)malloc(sizeof(double) * kernel_size * kernel_size);
+  gaussian_kernel(kernel, sigma, kernel_size);
 
   //////gaussian blur/////////
-  for (int i = 0; i < height - size; i++) {
-    rgba8_t* lineptr_1 = (rgba8_t*)(buffer + i * stride);
-    rgba8_t* lineptr_2 = (rgba8_t*)(buffer + (i + 1) * stride);
-    rgba8_t* lineptr_3 = (rgba8_t*)(buffer + (i + 2) * stride);
-    for (int j = 0; j < width - size; j++) {
+  for (int i = 0; i < height - kernel_size; i++) {
+    rgba8_t* array_lineptr[kernel_size];
+
+    for (int y = 0; y < kernel_size; y++){
+      array_lineptr[y] = (rgba8_t*)(buffer + (i+y) * stride);
+    }
+
+    // Compute gaussian pixel
+    for (int j = 0; j < width - kernel_size; j++) {
       double gaussian_pixel = 0.0;
-      for (int x = 0; x < size; x++) {
-	std::uint8_t cell_1 = (*(lineptr_1 + j + x)).r;
-	std::uint8_t cell_2 = (*(lineptr_2 + j + x)).r;
-	std::uint8_t cell_3 = (*(lineptr_3 + j + x)).r;
-	gaussian_pixel += kernel[x] * cell_1 + kernel[size + x] * cell_2 + kernel[size * 2 + x] * cell_3;
+      for (int x = 0; x < kernel_size; x++) {
+	for (int y = 0; y < kernel_size; y++){
+	  std::uint8_t cell_1 = (*(array_lineptr[y] + j + x)).r;
+	  gaussian_pixel += kernel[kernel_size * y + x] * cell_1;
+	}
       }
       auto cast_gaussian_pixel  = static_cast<std::uint8_t>(gaussian_pixel);
-      lineptr_1[j] = rgba8_t{cast_gaussian_pixel, cast_gaussian_pixel, cast_gaussian_pixel, 255};
-      lineptr_2[j] = rgba8_t{cast_gaussian_pixel, cast_gaussian_pixel, cast_gaussian_pixel, 255};
-      lineptr_3[j] = rgba8_t{cast_gaussian_pixel, cast_gaussian_pixel, cast_gaussian_pixel, 255};
+
+      // Assign gaussian pixel to image
+      for (int y = 0; y< kernel_size; y++){
+	array_lineptr[y][j] = rgba8_t{cast_gaussian_pixel, cast_gaussian_pixel, cast_gaussian_pixel, 255};
+      }
     }
   }
   free(kernel);
