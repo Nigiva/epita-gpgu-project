@@ -1,3 +1,4 @@
+#include <iostream>
 #include "utils.hpp"
 
 void gaussian_kernel(double *kernel, double sigma, int size){
@@ -8,12 +9,17 @@ void gaussian_kernel(double *kernel, double sigma, int size){
   for (int x = -mid; x <= mid; x++) {
     for (int y = -mid; y <= mid; y++) {
       r = sqrt(x * x + y * y);
-      kernel[(x + mid) * size + (y + mid)] = (exp(-(r * r) / s)) / (M_PI * s);
-      sum += kernel[(x + mid) * size + (y + mid)];
+      kernel[(y + mid) * size + (x + mid)] = (exp(-(r * r) / s)) / (M_PI * s);
+      sum += kernel[(y + mid) * size + (x + mid)];
     }
   }
+
   // normalising the Kernel
   for (int i = 0; i < size; ++i)
+  {
     for (int j = 0; j < size; ++j)
+    {
       kernel[i * size + j] /= sum;
+    }
+  }
 }
