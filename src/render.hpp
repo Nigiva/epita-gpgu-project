@@ -25,3 +25,6 @@ void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, 
 /// \param height Image height
 /// \param stride Number of bytes between two lines
 void render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);
+
+
+void images_difference(char *ref_buffer, int width, int height, int stride, char* img_buffer);
