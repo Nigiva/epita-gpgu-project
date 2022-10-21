@@ -46,7 +46,7 @@ target_compile_features(renderer PUBLIC cxx_std_14)
 target_link_libraries(renderer PRIVATE spdlog::spdlog)
 
 
-target_sources(renderer PRIVATE src/render.hpp src/render.cu src/render.cpp src/difference.hpp src/difference.cpp)
+target_sources(renderer PRIVATE src/render.hpp src/render.cu src/render.cpp src/utils.hpp src/utils.cpp src/difference.hpp src/difference.cpp)
 set_target_properties(renderer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 add_library(render_cpu_ref SHARED IMPORTED)
