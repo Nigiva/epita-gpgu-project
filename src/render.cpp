@@ -44,6 +44,4 @@ void images_difference(char *ref_buffer, int width, int height, int stride, char
 
 void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
 {
-    gray_scale(img_buffer, width, height, stride);
-    images_difference(ref_buffer, width, height, stride, img_buffer);
 }
