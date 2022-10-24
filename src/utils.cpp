@@ -28,7 +28,7 @@ std::uint8_t abs(std::uint8_t a, std::uint8_t b)
 {
   int res = a - b;
   if (res < 0){
-      res = res * (-1);
+      res = -res;
   }
   return (std::uint8_t) res;
 }
