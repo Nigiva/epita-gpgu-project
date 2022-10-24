@@ -23,3 +23,12 @@ void gaussian_kernel(double *kernel, double sigma, int size){
     }
   }
 }
+
+std::uint8_t abs(std::uint8_t a, std::uint8_t b)
+{
+  int res = a - b;
+  if (res < 0){
+      res = res * (-1);
+  }
+  return (std::uint8_t) res;
+}

@@ -17,7 +17,7 @@ void gray_scale(char* buffer, int width, int height, int stride){
   }
 }
 
-void images_difference(char *ref_buffer, int width, int height, int stride, char* img_buffer)
+void images_diff(char *ref_buffer, int width, int height, int stride, char* img_buffer)
 {
     for (int i = 0; i < height; i++)
     {
@@ -26,12 +26,12 @@ void images_difference(char *ref_buffer, int width, int height, int stride, char
 
         for (int j = 0; j < width; j++)
         {
-            auto cell_ref = *(lineptr_ref + j);
-            auto cell_img = *(lineptr_img + j);
+            auto cell_ref = lineptr_ref[j];
+            auto cell_img = lineptr_img[j];
 
-            std::uint8_t r = cell_ref.r - cell_img.r;
-            std::uint8_t g = cell_ref.g - cell_img.g;
-            std::uint8_t b = cell_ref.b - cell_img.b;
+            std::uint8_t r = abs(cell_ref.r - cell_img.r);
+            std::uint8_t g = abs(cell_ref.g - cell_img.g);
+            std::uint8_t b = abs(cell_ref.b - cell_img.b);
             std::uint8_t a = cell_img.a;
 
             lineptr_img[j] = rgba8_t{r, g, b, a};
