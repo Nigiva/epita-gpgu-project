@@ -61,3 +61,8 @@ void opening(char* img_buffer, int width, int height, int stride, int radius, bo
 /// \param radius The window's radius
 /// \param is_square True if the window is a square, False for a disc
 void closing(char* img_buffer, int width, int height, int stride, int radius, bool is_square);
+
+
+void bbox(char *img_buffer, int width, int height, int stride, int threshold, int peak);
+
+
