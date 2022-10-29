@@ -78,6 +78,15 @@ void gaussian_blur(char* buffer, int width, int height, int stride, int kernel_s
   free(kernel);
 }
 
+void opening(char* img_buffer, int width, int height, int stride, int radius, bool is_square){
+  erosion_dilation(img_buffer, width, height, stride, radius, is_square, true);
+  erosion_dilation(img_buffer, width, height, stride, radius, is_square, false);
+}
+void closing(char* img_buffer, int width, int height, int stride, int radius, bool is_square){
+  erosion_dilation(img_buffer, width, height, stride, radius, is_square, false);
+  erosion_dilation(img_buffer, width, height, stride, radius, is_square, true);
+}
+
 void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
 {
 }
