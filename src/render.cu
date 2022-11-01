@@ -14,68 +14,55 @@ void _abortError(const char* msg, const char* fname, int line)
 #define abortError(msg) _abortError(msg, __FUNCTION__, __LINE__)
 
 
-
-rgba8_t heat_lut(float x)
-{
-    assert(0 <= x && x <= 1);
-    float x0 = 1.f / 4.f;
-    float x1 = 2.f / 4.f;
-    float x2 = 3.f / 4.f;
-
-    if (x < x0)
-    {
-        auto g = static_cast<std::uint8_t>(x / x0 * 255);
-        return rgba8_t{0, g, 255, 255};
-    }
-    else if (x < x1)
-    {
-        auto b = static_cast<std::uint8_t>((x1 - x) / x0 * 255);
-        return rgba8_t{0, 255, b, 255};
-    }
-    else if (x < x2)
-    {
-        auto r = static_cast<std::uint8_t>((x - x1) / x0 * 255);
-        return rgba8_t{r, 255, 0, 255};
-    }
-    else
-    {
-        auto b = static_cast<std::uint8_t>((1.f - x) / x0 * 255);
-        return rgba8_t{255, b, 0, 255};
-    }
-}
-
 // Device code
-__global__ void mykernel(char* buffer, int width, int height, size_t pitch)
+__global__ void gpu_gray_scale(char* buffer, int width, int height, size_t pitch)
 {
-    float denum = width * width + height * height;
-
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
 
     if (x >= width || y >= height)
         return;
 
-    uchar4*  lineptr = (uchar4*)(buffer + y * pitch);
-    float    v       = (x * x + y * y) / denum;
-    uint8_t  grayv   = v * 255;
+    // get cell
+    rgba8_t*  lineptr = (rgba8_t*)(buffer + y * pitch);
+    rgba8_t cell = lineptr[x];
 
+    // get gray scale
+    std::uint8_t gray = static_cast<std::uint8_t>(0.3 * cell.r + 0.59 * cell.g + 0.11 * cell.b);
 
-    lineptr[x] = {grayv, grayv, grayv, 255};
+    // assign gray pixel
+    lineptr[x] = {gray, gray, gray, 255};
 }
 
-std::vector<std::vector<int>> render(char* hostBuffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
+std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
 {
     cudaError_t rc = cudaSuccess;
 
-    // Allocate device memory
-    char*  devBuffer;
-    size_t pitch;
+    // Allocate device memory and copy reference image to device memory
+    char*  devRefBuffer;
+    size_t pitchRef;
 
-    rc = cudaMallocPitch(&devBuffer, &pitch, width * sizeof(rgba8_t), height);
+    rc = cudaMallocPitch(&devRefBuffer, &pitchRef, width * sizeof(rgba8_t), height);
     if (rc)
         abortError("Fail buffer allocation");
 
-    // Run the kernel with blocks of size 64 x 64
+    rc = cudaMemcpy2D(devRefBuffer, pitchRef, ref_buffer, stride, width * sizeof(rgba8_t), height, cudaMemcpyHostToDevice);
+    if (rc)
+        abortError("Fail buffer allocation");
+
+    // Allocate device memory and copy current image to device memory
+    char*  devImgBuffer;
+    size_t pitchImg;
+
+    rc = cudaMallocPitch(&devImgBuffer, &pitchImg, width * sizeof(rgba8_t), height);
+    if (rc)
+        abortError("Fail buffer allocation");
+
+    rc = cudaMemcpy2D(devImgBuffer, pitchImg, img_buffer, stride, width * sizeof(rgba8_t), height, cudaMemcpyHostToDevice);
+    if (rc)
+        abortError("Fail buffer allocation");
+
+    // Run the kernel with blocks of size 32 x 32
     {
         int bsize = 32;
         int w     = std::ceil((float)width / bsize);
@@ -85,19 +72,28 @@ std::vector<std::vector<int>> render(char* hostBuffer, int width, int height, st
 
         dim3 dimBlock(bsize, bsize);
         dim3 dimGrid(w, h);
-        mykernel<<<dimGrid, dimBlock>>>(devBuffer, width, height, pitch);
 
+       gpu_gray_scale<<<dimGrid, dimBlock>>>(devRefBuffer, width, height, pitchRef);
+        if (cudaPeekAtLastError())
+            abortError("Computation Error");
+
+       gpu_gray_scale<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg);
         if (cudaPeekAtLastError())
             abortError("Computation Error");
     }
 
     // Copy back to main memory
-    rc = cudaMemcpy2D(hostBuffer, stride, devBuffer, pitch, width * sizeof(rgba8_t), height, cudaMemcpyDeviceToHost);
+    rc = cudaMemcpy2D(img_buffer, stride, devImgBuffer, pitchImg, width * sizeof(rgba8_t), height, cudaMemcpyDeviceToHost);
     if (rc)
         abortError("Unable to copy buffer back to memory");
 
     // Free
-    rc = cudaFree(devBuffer);
+    rc = cudaFree(devRefBuffer);
+    if (rc)
+        abortError("Unable to free memory");
+
+    // Free
+    rc = cudaFree(devImgBuffer);
     if (rc)
         abortError("Unable to free memory");
 
