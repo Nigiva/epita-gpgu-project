@@ -3,6 +3,9 @@
 #include <cassert>
 #include "utils.hpp"
 
+
+#define ABS_MIN(a, b) ((a>=b)?(a-b):(b-a))
+
     [[gnu::noinline]]
 void _abortError(const char* msg, const char* fname, int line)
 {
@@ -61,6 +64,29 @@ __global__ void gpu_gray_scale(char* buffer, int width, int height, size_t pitch
 
     // assign gray pixel
     lineptr[x] = {gray, gray, gray, 255};
+}
+
+
+__global__ void gpu_difference(char* ref_buffer, int width, int height, size_t ref_pitch, char* img_buffer, size_t img_pitch)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x >= width || y >= height)
+        return;
+
+    // get reference and image cell
+    rgba8_t* ref_lineptr = (rgba8_t*)(ref_buffer + y * ref_pitch);
+    rgba8_t ref_cell = ref_lineptr[x];
+    rgba8_t* img_lineptr = (rgba8_t*)(img_buffer + y * img_pitch);
+    rgba8_t img_cell = img_lineptr[x];
+
+    std::uint8_t r = ABS_MIN(ref_cell.r, img_cell.r);
+    std::uint8_t g = ABS_MIN(ref_cell.g, img_cell.g);
+    std::uint8_t b = ABS_MIN(ref_cell.b, img_cell.b);
+
+    // assign diff pixel to image buffer
+    img_lineptr[x] = {r, g, b, 255};
 }
 
 std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
@@ -161,6 +187,9 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         pitchImg = pitchTmp;
         devTmpBuffer = tmp_buff;
         pitchTmp = tmp_pitch;
+
+        // difference
+        gpu_difference<<<dimGrid, dimBlock>>>(devRefBuffer, width, height, pitchRef, devImgBuffer, pitchImg);
     }
 
     // Copy back to main memory
