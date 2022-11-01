@@ -63,7 +63,7 @@ __global__ void mykernel(char* buffer, int width, int height, size_t pitch)
     lineptr[x] = {grayv, grayv, grayv, 255};
 }
 
-void render(char* hostBuffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
+std::vector<std::vector<int>> render(char* hostBuffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
 {
     cudaError_t rc = cudaSuccess;
 
@@ -100,4 +100,6 @@ void render(char* hostBuffer, int width, int height, std::ptrdiff_t stride, char
     rc = cudaFree(devBuffer);
     if (rc)
         abortError("Unable to free memory");
+
+    return {};
 }

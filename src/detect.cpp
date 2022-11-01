@@ -5,8 +5,11 @@
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <nlohmann/json.hpp>
 #include "render.hpp"
 #include "utils.hpp"
+
+using json = nlohmann::json;
 
 char* read_png(const char*filename,
         int* file_width,
@@ -158,6 +161,9 @@ int main(int argc, char** argv)
     {
     }
 
+    // json object containg cordonates
+    json res;
+
     // Rendering
     spdlog::info("Runnging {} mode with (w={},h={}).", mode, width, height);
     for (size_t i = 0; i < images_filename.size(); i += 1)
@@ -167,13 +173,16 @@ int main(int argc, char** argv)
 
         if (mode == "CPU")
         {
-            render_cpu(ref_buffer, width, height, stride, img_buffer);
+            res[images_filename[i].c_str()] = render_cpu(ref_buffer, width, height, stride, img_buffer);
         }
         else if (mode == "GPU")
         {
-            render(ref_buffer, width, height, stride, img_buffer);
+            res[images_filename[i].c_str()] = render(ref_buffer, width, height, stride, img_buffer);
         }
 
         write_png(img_buffer, width, height, stride, std::string("output").append(std::to_string(i)).append(std::string(".png")).c_str());
     }
+
+    // print result
+    std::cout << res.dump(2) << std::endl;
 }

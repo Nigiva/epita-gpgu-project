@@ -91,7 +91,7 @@ void closing(char* img_buffer, int width, int height, int stride, int radius, bo
 }
 
 
-void bbox(char *img_buffer, int width, int height, int stride, int threshold, int peak){
+std::vector<std::vector<int>> bbox(char *img_buffer, int width, int height, int stride, int threshold, int peak){
 
     int L[height][width];
 
@@ -224,10 +224,18 @@ void bbox(char *img_buffer, int width, int height, int stride, int threshold, in
             lineptr = (rgba8_t*)((char*)lineptr + stride);
         }
     }
+
+    std::vector<std::vector<int>> result = {};
+
+    for (int i = 0; i < number_components; i++){
+        result.push_back({bbox[i][0], bbox[i][1], bbox[i][2], bbox[i][3]});
+    }
+
+    return result;
 }
 
 
-void render_cpu(char* ref_buffer, int width, int height, int stride, char* img_buffer){
+std::vector<std::vector<int>> render_cpu(char* ref_buffer, int width, int height, int stride, char* img_buffer){
     // pretretment on current image
     gray_scale(img_buffer, width, height, stride);
     gaussian_blur(img_buffer, width, height, stride, 5);
@@ -249,5 +257,5 @@ void render_cpu(char* ref_buffer, int width, int height, int stride, char* img_b
     int peak;
     hysteresis(img_buffer, width, height, stride, &threshold, &peak);
     // get bounding boxes
-    bbox(img_buffer, width, height, stride, threshold, peak);
+    return bbox(img_buffer, width, height, stride, threshold, peak);
 }
