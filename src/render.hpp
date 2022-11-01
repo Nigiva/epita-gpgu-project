@@ -29,7 +29,7 @@ void gaussian_blur(char* buffer, int width, int height, int stride, int kernel_s
 /// \param width Image width
 /// \param height Image height
 /// \param stride Number of bytes between two lines
-void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);
+void render_cpu(char* ref_buffer, int width, int height, int stride, char* img_buffer);
 
 
 
@@ -63,6 +63,12 @@ void opening(char* img_buffer, int width, int height, int stride, int radius, bo
 void closing(char* img_buffer, int width, int height, int stride, int radius, bool is_square);
 
 
+/// \param img_buffer The image to change
+/// \param width The image's width
+/// \param height The image's height
+/// \param stride The image's stride
+/// \param threshold minimum difference
+/// \param peak boxes must contain a value >= peak
 void bbox(char *img_buffer, int width, int height, int stride, int threshold, int peak);
 
 
