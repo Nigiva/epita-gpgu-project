@@ -1,10 +1,11 @@
 #include <cstddef>
 #include <memory>
-
+#include <iostream>
 #include <png.h>
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
 #include "render.hpp"
+#include "utils.hpp"
 
 char* read_png(const char*filename,
                     int* file_width,
@@ -160,6 +161,10 @@ int main(int argc, char** argv)
 
   closing(img_buffer, width, height, stride, (int)closing_radius, false);
   opening(img_buffer, width, height, stride, (int)opening_radius, false);
+  int threshold;
+  int peak;
+  hysteresis(img_buffer, width, height, stride, &threshold, &peak);
+  bbox(img_buffer, width, height, stride, threshold, peak);
   write_png(img_buffer, width, height, stride, "output42.png");
   // Rendering
   spdlog::info("Runnging {} mode with (w={},h={}).", mode, width, height);
