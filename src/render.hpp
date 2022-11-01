@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <memory>
 #include <cstdint>
+#include <vector>
 
 struct rgba8_t {
   std::uint8_t r;
@@ -29,7 +30,7 @@ void gaussian_blur(char* buffer, int width, int height, int stride, int kernel_s
 /// \param width Image width
 /// \param height Image height
 /// \param stride Number of bytes between two lines
-void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);
+std::vector<std::vector<int>> render_cpu(char* ref_buffer, int width, int height, int stride, char* img_buffer);
 
 
 
@@ -37,7 +38,7 @@ void render_cpu(char* ref_buffer, int width, int height, std::ptrdiff_t stride, 
 /// \param width Image width
 /// \param height Image height
 /// \param stride Number of bytes between two lines
-void render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);
+std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);
 
 /// \param buffer The RGBA24 image buffer
 /// \param width Image width
@@ -63,6 +64,12 @@ void opening(char* img_buffer, int width, int height, int stride, int radius, bo
 void closing(char* img_buffer, int width, int height, int stride, int radius, bool is_square);
 
 
-void bbox(char *img_buffer, int width, int height, int stride, int threshold, int peak);
+/// \param img_buffer The image to change
+/// \param width The image's width
+/// \param height The image's height
+/// \param stride The image's stride
+/// \param threshold minimum difference
+/// \param peak boxes must contain a value >= peak
+std::vector<std::vector<int>> bbox(char *img_buffer, int width, int height, int stride, int threshold, int peak);
 
 

@@ -20,12 +20,21 @@ std::uint8_t abs(std::uint8_t a, std::uint8_t b);
 void erosion_dilation(char *img_buffer, int width, int height, int stride, int radius, bool is_square, bool is_erosion);
 
 
-/// \param img_buffer The image to change
-/// \param width The image's width
-/// \param height The image's height
-/// \param stride The image's stride
+/// \param img_buffer the image to change
+/// \param width the image's width
+/// \param height the image's height
+/// \param stride the image's stride
 int* histo(char *img_buffer, int width, int height, int stride);
 
+/// \param width the image's width
+/// \param height the image's height
+/// \param hist the histogram of the image
 int otsu(int width, int height, int* hist);
 
+/// \param img_buffer The image to change
+/// \param width the image's width
+/// \param height the image's height
+/// \param stride The image's stride
+/// \param threshold_1 address of the variable that will contain the first threshold
+/// \param threshold_2 address of the variable that will contain the second threshold
 void hysteresis(char* img_buffer, int width, int height, int stride, int* threshold_1, int* threshold_2);
