@@ -3,6 +3,8 @@
 #include <cassert>
 #include "utils.hpp"
 #include <math.h>
+#include <thrust/device_vector.h>
+#include <iostream>
 
 #define ABS_MIN(a, b) ((a>=b)?(a-b):(b-a))
 
@@ -126,6 +128,18 @@ __global__ void erosion_dilation(char *img_buffer, int width, int height, int im
     base_ptr2[x] = rgba8_t{val, val, val, 255};
 }
 
+__global__ void histogram(char* img_buffer, int width, int height, int img_pitch, int* histo)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x >= width || y >= height)
+        return;
+
+    std::uint8_t cellValue = ((rgba8_t*)(img_buffer + y * img_pitch))[x].r;
+    atomicAdd(histo + cellValue, 1);
+}
+
 std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
 {
     cudaError_t rc = cudaSuccess;
@@ -182,6 +196,16 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
     if (rc)
         abortError("Fail buffer allocation");
 
+    // Allocate device memory for histogram
+    int* histoBuffer;
+
+    rc = cudaMalloc(&histoBuffer, 256 * sizeof(int));
+    if (rc)
+        abortError("Fail buffer allocation");
+    rc = cudaMemset(histoBuffer, 0, 256 * sizeof(int));
+    if (rc)
+        abortError("Fail buffer allocation");
+
     // Run the kernel with blocks of size 32 x 32
     {
         int bsize = 32;
@@ -233,11 +257,39 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         double opening_radius = width * height * 25 / (1920 * 1080);
 
         // perform morphology closing and opening
+        // closing
         erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)closing_radius, false, false, devTmpBuffer, pitchTmp);
         erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)closing_radius, false, true, devImgBuffer, pitchImg);
-
+        //opening
         erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)opening_radius, false, true, devTmpBuffer, pitchTmp);
         erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)opening_radius, false, false, devImgBuffer, pitchImg);
+
+        // get histogram of the image
+        histogram<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, histoBuffer);
+
+        // copy histogram from device to host
+        int* histoHostBuffer = (int*)malloc(256 * sizeof(int));
+        rc = cudaMemcpy(histoHostBuffer, histoBuffer, 256 * sizeof(int), cudaMemcpyDeviceToHost);
+        if (rc)
+            abortError("Unable to copy buffer back to memory");
+
+        // otsu: first threshold
+        // (cumpute on Host !)
+        int threshold_1 = otsu(width, height, histoHostBuffer);
+
+        // puts zeros in the histogram for elements in [0:threshold_1]
+        int N = 0;
+        for (int i = 0; i <= threshold_1; i++){
+            N += histoHostBuffer[i];
+            histoHostBuffer[i] = 0;
+        }
+
+        // otsu: second threshold
+        // (cumpute on Host !)
+        int threshold_2 = otsu(1, width * height - N, histoHostBuffer);
+
+        free(histoHostBuffer);
+
     }
 
     // Copy back to main memory
@@ -257,6 +309,16 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
 
     // Free
     rc = cudaFree(gaussianKernel);
+    if (rc)
+        abortError("Unable to free memory");
+
+    // Free
+    rc = cudaFree(devTmpBuffer);
+    if (rc)
+        abortError("Unable to free memory");
+
+    // Free
+    rc = cudaFree(histoBuffer);
     if (rc)
         abortError("Unable to free memory");
 
