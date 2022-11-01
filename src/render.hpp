@@ -44,3 +44,20 @@ void render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char
 /// \param height Image height
 /// \param stride Number of bytes between two lines
 void images_diff(char *ref_buffer, int width, int height, int stride, char* img_buffer);
+
+
+/// \param img_buffer The image to change
+/// \param width The image's width
+/// \param height The image's height
+/// \param stride The image's stride
+/// \param radius The window's radius
+/// \param is_square True if the window is a square, False for a disc
+void opening(char* img_buffer, int width, int height, int stride, int radius, bool is_square);
+
+/// \param img_buffer The image to change
+/// \param width The image's width
+/// \param height The image's height
+/// \param stride The image's stride
+/// \param radius The window's radius
+/// \param is_square True if the window is a square, False for a disc
+void closing(char* img_buffer, int width, int height, int stride, int radius, bool is_square);

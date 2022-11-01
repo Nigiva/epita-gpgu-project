@@ -146,10 +146,21 @@ int main(int argc, char** argv)
   char* ref_buffer = read_png(reference_filename.c_str(), &width, &height, &stride);
   gray_scale(ref_buffer, width, height, stride);
   gaussian_blur(ref_buffer, width, height, stride, 5);
-  write_png(ref_buffer, width, height, stride, "output42.png");
 
-  char* img_buffer;
+  int img_width;
+  int img_height;
+  int img_stride;
+  char* img_buffer = read_png(images_filename[0].c_str(), &img_width, &img_height, &img_stride);
+  gray_scale(img_buffer, img_width, img_height, img_stride);
+  gaussian_blur(img_buffer, img_width, img_height, img_stride, 5);
+  images_diff(ref_buffer, width, height, stride, img_buffer);
 
+  double closing_radius = img_width * img_height * 10 / (1920 * 1080);
+  double opening_radius = img_width * img_height * 25 / (1920 * 1080);
+
+  closing(img_buffer, width, height, stride, (int)closing_radius, false);
+  opening(img_buffer, width, height, stride, (int)opening_radius, false);
+  write_png(img_buffer, width, height, stride, "output42.png");
   // Rendering
   spdlog::info("Runnging {} mode with (w={},h={}).", mode, width, height);
   for (int i = 0; i < images_filename.size(); i += 1)
@@ -168,4 +179,3 @@ int main(int argc, char** argv)
 
   //std::cout << result.asString() << "\n";
 }
-
