@@ -2,7 +2,7 @@
 #include <spdlog/spdlog.h>
 #include <cassert>
 #include "utils.hpp"
-
+#include <math.h>
 
 #define ABS_MIN(a, b) ((a>=b)?(a-b):(b-a))
 
@@ -87,6 +87,43 @@ __global__ void gpu_difference(char* ref_buffer, int width, int height, size_t r
 
     // assign diff pixel to image buffer
     img_lineptr[x] = {r, g, b, 255};
+}
+
+__global__ void erosion_dilation(char *img_buffer, int width, int height, int img_pitch, int radius, bool is_square, bool is_erosion, char* res_buffer, int res_pitch)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x >= width || y >= height)
+        return;
+
+    char* base_ptr = img_buffer + y * img_pitch;
+
+    std::uint8_t val = (is_erosion) ? 255 : 0;
+
+    // iteration on each pixel around current pixel
+    for (int i = -radius; i <= radius; i++){
+        for (int j = -radius; j <= radius; j++){
+            // if outside the image
+            if (i + x < 0 or i + x >= width or j + y < 0 or j + y >= height)
+                continue;
+
+            // if disc and not in it
+            if (!is_square and !((int)sqrtf(i*i + j*j) <= radius))
+                continue;
+            std::uint8_t cell = ((rgba8_t*)(base_ptr + j * img_pitch))[i + x].r;
+            if (is_erosion and val > cell){
+                val = cell;
+            }
+            else if (!is_erosion and val < cell){
+                val = cell;
+            }
+        }
+    }
+
+    // apply pixel value
+    rgba8_t* base_ptr2 = (rgba8_t*)(res_buffer + y * res_pitch);
+    base_ptr2[x] = rgba8_t{val, val, val, 255};
 }
 
 std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
@@ -190,6 +227,17 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
 
         // difference
         gpu_difference<<<dimGrid, dimBlock>>>(devRefBuffer, width, height, pitchRef, devImgBuffer, pitchImg);
+
+        // calculate adaptative closing opening radius
+        double closing_radius = width * height * 10 / (1920 * 1080);
+        double opening_radius = width * height * 25 / (1920 * 1080);
+
+        // perform morphology closing and opening
+        erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)closing_radius, false, false, devTmpBuffer, pitchTmp);
+        erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)closing_radius, false, true, devImgBuffer, pitchImg);
+
+        erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)opening_radius, false, true, devTmpBuffer, pitchTmp);
+        erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)opening_radius, false, false, devImgBuffer, pitchImg);
     }
 
     // Copy back to main memory
