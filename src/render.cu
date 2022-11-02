@@ -140,6 +140,86 @@ __global__ void histogram(char* img_buffer, int width, int height, int img_pitch
     atomicAdd(histo + cellValue, 1);
 }
 
+__global__ void thresholding(char* img_buffer, int width, int height, int img_pitch, int threshold, int* L)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x >= width || y >= height)
+        return;
+
+
+    rgba8_t* lineptr = (rgba8_t*)(img_buffer + y * img_pitch);
+    if (lineptr[x].r < threshold){
+        L[y * width + x] = 0;
+    }
+    else {
+        L[y * width + x] = y * width + x + 1;
+    }
+}
+
+__global__ void propagate_relabeling(int* L, int width, int height, bool* is_changed, bool relabeling, int* nb_components){
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x >= width || y >= height)
+        return;
+
+    if (L[y * width + x] == 0)
+        return;
+
+    if (relabeling and L[y * width + x] == y * width + x + 1){
+        *is_changed = true;
+        // relabeling
+        L[y * width + x] = atomicAdd(nb_components, 1) + 1;
+        return;
+    }
+
+    int mid_kernel = 1;
+
+    // Propagate
+    for (int i = -mid_kernel; i <= mid_kernel; i++) {
+        for (int j = -mid_kernel; j <= mid_kernel; j++) {
+            if (i + x < 0 or i + x >= width or j + y < 0 or j + y >= height)
+                continue;
+            if (L[(j+y) * width + i+x] == 0)
+                continue;
+            if (L[(j+y) * width + i+x] < L[y * width + x]){
+                L[y * width + x] = L[(j+y) * width + i+x];
+                *is_changed = true;
+            }
+        }
+    }
+}
+__global__ void get_bbox(int* L, int width, int height, int* max_values, int* bbox, char* img_buffer, int pitch)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x >= width || y >= height)
+        return;
+    if (L[y * width + x] == 0)
+        return;
+
+    int component = L[y * width + x];
+
+    uint8_t value = ((rgba8_t*)(img_buffer + y * pitch))[x].r;
+
+    // put max value for the current component
+    atomicMax(max_values + component - 1, (int)value);
+
+    // change bbox values if necessary
+
+    if (y - 1 >= 0 and value != ((rgba8_t*)(img_buffer + (y - 1) * pitch))[x].r)
+        atomicMin(bbox + (component - 1) * 4 + 1, y);
+    if (y + 1 < height and value != ((rgba8_t*)(img_buffer + (y + 1) * pitch))[x].r)
+        atomicMax(bbox + (component - 1) * 4 + 3, y);
+    if (x - 1 >= 0 and value != ((rgba8_t*)(img_buffer + y * pitch))[x - 1].r)
+        atomicMin(bbox + (component - 1) * 4, x);
+    if (x + 1 < width and value != ((rgba8_t*)(img_buffer + y * pitch))[x + 1].r)
+        atomicMax(bbox + (component - 1) * 4 + 2, x);
+}
+
 std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer)
 {
     cudaError_t rc = cudaSuccess;
@@ -205,6 +285,35 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
     rc = cudaMemset(histoBuffer, 0, 256 * sizeof(int));
     if (rc)
         abortError("Fail buffer allocation");
+
+    // Allocate device memory for L
+    int* L;
+
+    rc = cudaMalloc(&L, width * height * sizeof(int));
+    if (rc)
+        abortError("Fail buffer allocation");
+
+    // Allocate device memory for share information between CPU and GPU
+    bool* is_changed;
+
+    rc = cudaMalloc(&is_changed, sizeof(bool));
+    if (rc)
+        abortError("Fail buffer allocation");
+    rc = cudaMemset(is_changed, true, sizeof(bool));
+    if (rc)
+        abortError("Fail buffer allocation");
+
+    int* nb_components;
+
+    rc = cudaMalloc(&nb_components, sizeof(int));
+    if (rc)
+        abortError("Fail buffer allocation");
+    rc = cudaMemset(nb_components, 0, sizeof(int));
+    if (rc)
+        abortError("Fail buffer allocation");
+
+    std::vector<std::vector<int>> result;
+
 
     // Run the kernel with blocks of size 32 x 32
     {
@@ -290,8 +399,99 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
 
         free(histoHostBuffer);
 
-    }
+        // apply thresholding
+        thresholding<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, threshold_1, L);
 
+        // Apply propagate
+        bool* is_changed_host = (bool*)malloc(sizeof(bool));
+        rc = cudaMemcpy(is_changed_host, is_changed, sizeof(bool), cudaMemcpyDeviceToHost);
+        if (rc)
+            abortError("Unable to copy buffer back to memory");
+
+        for (int i = 0; i <= 1; i++){
+            while (*is_changed_host){
+                rc = cudaMemset(is_changed, false, sizeof(bool));
+                if (rc)
+                    abortError("Fail buffer allocation");
+                propagate_relabeling<<<dimGrid, dimBlock>>>(L, width, height, is_changed, (bool)i, nb_components);
+
+                rc = cudaMemcpy(is_changed_host, is_changed, sizeof(bool), cudaMemcpyDeviceToHost);
+                if (rc)
+                    abortError("Unable to copy buffer back to memory");
+            }
+            *is_changed_host = true;
+        }
+        free(is_changed_host);
+
+
+        int* nb_components_host = (int*)malloc(sizeof(int));
+        rc = cudaMemcpy(nb_components_host, nb_components, sizeof(int), cudaMemcpyDeviceToHost);
+        if (rc)
+            abortError("Unable to copy buffer back to memory");
+
+        if (*nb_components_host != 0){
+            // Apply bbox
+            int* bbox;
+            rc = cudaMalloc(&bbox, 4 * (*nb_components_host) * sizeof(int));
+            if (rc)
+                abortError("Fail buffer allocation");
+            rc = cudaMemset(bbox, 0, 4 * (*nb_components_host) * sizeof(int));
+            if (rc)
+                abortError("Fail buffer allocation");
+
+            for (int i = 0; i < *nb_components_host; i++)
+            {
+                rc = cudaMemset(bbox + i * 4, 127, 2 * sizeof(int));
+                if (rc)
+                    abortError("Fail buffer allocation");
+            }
+
+            int* max_values;
+            rc = cudaMalloc(&max_values, (*nb_components_host) * sizeof(int));
+            if (rc)
+                abortError("Fail buffer allocation");
+            rc = cudaMemset(max_values, 0, (*nb_components_host) * sizeof(int));
+            if (rc)
+                abortError("Fail buffer allocation");
+
+            get_bbox<<<dimGrid, dimBlock>>>(L, width, height, max_values, bbox, devImgBuffer, pitchImg);
+            if (cudaPeekAtLastError())
+                abortError("Computation Error");
+
+            int* bbox_host = (int*)malloc(4 * (*nb_components_host) * sizeof(int));
+            int* max_values_host = (int*)malloc((*nb_components_host) * sizeof(int));
+
+            rc = cudaMemcpy(bbox_host, bbox, 4 * (*nb_components_host) * sizeof(int), cudaMemcpyDeviceToHost);
+            if (rc)
+                abortError("Unable to copy buffer back to memory");
+
+            rc = cudaMemcpy(max_values_host, max_values, (*nb_components_host) * sizeof(int), cudaMemcpyDeviceToHost);
+            if (rc)
+                abortError("Unable to copy buffer back to memory");
+
+            for (int i = 0; i < *nb_components_host; i++)
+            {
+                if (max_values_host[i] >= threshold_2)
+                {
+                    std::vector<int> cur_bbox = {bbox_host[i * 4], bbox_host[i * 4 + 1], bbox_host[i * 4 + 2] - bbox_host[i * 4], bbox_host[i * 4 + 3] - bbox_host[i * 4 + 1]};
+                    result.push_back(cur_bbox);
+                }
+            }
+
+            // Free
+            rc = cudaFree(bbox);
+            if (rc)
+                abortError("Unable to free memory");
+            rc = cudaFree(max_values);
+            if (rc)
+                abortError("Unable to free memory");
+
+            free(bbox_host);
+            free(max_values_host);
+        }
+
+        free(nb_components_host);
+    }
     // Copy back to main memory
     rc = cudaMemcpy2D(img_buffer, stride, devImgBuffer, pitchImg, width * sizeof(rgba8_t), height, cudaMemcpyDeviceToHost);
     if (rc)
@@ -322,5 +522,17 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
     if (rc)
         abortError("Unable to free memory");
 
-    return {};
+    // Free
+    rc = cudaFree(L);
+    if (rc)
+        abortError("Unable to free memory");
+    // Free
+    rc = cudaFree(is_changed);
+    if (rc)
+        abortError("Unable to free memory");
+
+    rc = cudaFree(nb_components);
+    if (rc)
+        abortError("Unable to free memory");
+    return result;
 }
