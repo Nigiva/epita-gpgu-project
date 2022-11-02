@@ -103,7 +103,7 @@ std::vector<std::vector<int>> bbox(char *img_buffer, int width, int height, int 
                 L[y][x] = 0;
             }
             else {
-                L[y][x] = y * width + x;
+                L[y][x] = y * width + x + 1;
             }
         }
     }
