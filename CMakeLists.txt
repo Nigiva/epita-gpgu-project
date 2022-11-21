@@ -24,7 +24,7 @@ FetchContent_MakeAvailable(CLI11)
 FetchContent_MakeAvailable(json)
 
 # Create data Dir and download videos
-file(DOWNLOAD "https://cloud.lrde.epita.fr/s/oE5t9TpweK3cDBj/download?path=&files=Aled.mp4" "data/Aled.mp4")
+file(DOWNLOAD "https://cdn-122.anonfiles.com/Z9U6JeIcy4/3ede795a-1669066071/Aled.mp4" "data/Aled.mp4")
 
 # Check all packages are available
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR} )
