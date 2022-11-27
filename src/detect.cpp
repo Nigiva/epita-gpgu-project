@@ -19,11 +19,13 @@ int main(int argc, char** argv)
     std::string reference_filename;
     std::vector<std::string> images_filename;
     std::string mode;
+    std::string version;
 
     CLI::App app{"detect"};
     app.add_option("reference", reference_filename, "reference image")->required()->check(CLI::ExistingFile);
     app.add_option("inputs", images_filename, "input images")->required()->check(CLI::ExistingFile);
     app.add_set("-m", mode, {"GPU", "CPU"}, "Either 'GPU' or 'CPU'");
+    app.add_set("-v", version, {"baseline","optimized"}, "Either 'baseline' or 'optimized'")->default_val("optimized");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -50,7 +52,7 @@ int main(int argc, char** argv)
     json res;
 
     // Rendering
-    spdlog::info("Runnging {} mode with (w={},h={}).", mode, width, height);
+    // spdlog::info("Runnging {} mode with (w={},h={}).", mode, width, height);
     for (size_t i = 0; i < images_filename.size(); i += 1)
     {
         // read image
@@ -60,31 +62,15 @@ int main(int argc, char** argv)
         {
             res[images_filename[i].c_str()] = render_cpu(ref_buffer, width, height, stride, img_buffer);
 
-            /*
-            gray_scale(img_buffer, width, height, stride);
-            write_png(img_buffer, width, height, stride, std::string("output_gray_scale.png").c_str());
-            gaussian_blur(img_buffer, width, height, stride, 5);
-            write_png(img_buffer, width, height, stride, std::string("output_blur.png").c_str());
-            images_diff(ref_buffer, width, height, stride, img_buffer);
-            write_png(img_buffer, width, height, stride, std::string("output_diff.png").c_str());
-            closing(img_buffer, width, height, stride, 10, false);
-            opening(img_buffer, width, height, stride, 25, false);
-            write_png(img_buffer, width, height, stride, std::string("output_closing_opening.png").c_str());
-
-            int threshold;
-            int peak;
-            hysteresis(img_buffer, width, height, stride, &threshold, &peak);
-            res[images_filename[i].c_str()] = bbox(img_buffer, width, height, stride, threshold, peak);
-            write_png(img_buffer, width, height, stride, std::string("output_propagate.png").c_str());
-            */
-
         }
         else if (mode == "GPU")
         {
-            res[images_filename[i].c_str()] = render(ref_buffer, width, height, stride, img_buffer);
+            if (version == "baseline")
+                res[images_filename[i].c_str()] = render(ref_buffer, width, height, stride, img_buffer, true);
+            else if (version == "optimized")
+                res[images_filename[i].c_str()] = render(ref_buffer, width, height, stride, img_buffer, false);
         }
-
-        write_png(img_buffer, width, height, stride, std::string("output").append(std::to_string(i)).append(std::string(".png")).c_str());
+        // write_png(img_buffer, width, height, stride, std::string("output").append(std::to_string(i)).append(std::string(".png")).c_str());
     }
 
     // print result
