@@ -23,19 +23,19 @@ export_video_path = args.export_video
 
 
 # Find all images
-image_list = glob.glob(os.path.join(import_dir_path, "input-*.jpg"))
+image_list = glob.glob(os.path.join(import_dir_path, "input-*.png"))
 image_list.sort()
 print(f"{len(image_list)} images found !")
 
 # Read JSON in STD IN
 stdin_content = sys.stdin.read()
 # Convert STDIN string to Dict
-box_dict = json.loads(stdin_content)
-
+box_dict_2 = json.loads(stdin_content)
+box_dict = {k.split('/')[-1]: v for k,v in box_dict_2.items()} 
 
 
 def coord_matrix_to_opencv(x, y):
-    return (y, x)
+    return (x, y)
 
 
 # Get shape of the image to determine the shape of the video
