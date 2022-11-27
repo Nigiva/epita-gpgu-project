@@ -40,22 +40,22 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 
 ## D) How to use the project ?
 ### D.1) To convert a video to an image folder
-To convert a video to an image folder, you can use [`convert_mp4_to_jpg.py`](convert_mp4_to_jpg.py).
+To convert a video to an image folder, you can use [`convert_mp4_to_png.py`](convert_mp4_to_png.py).
 
 By simply running 
 ```
-python convert_mp4_to_jpg.py
+python convert_mp4_to_png.py
 ```
 the video `build/data/Aled.mp4` will be converted into a folder of images contained in `build/data/export/`. This folder is deleted on each re-generation.
 
 If you want to choose the video to be converted or the destination folder for the images, you can read the documentation by running :
 ```
-python convert_mp4_to_jpg.py -h
+python convert_mp4_to_png.py -h
 ```
 
 ### D.2) To run object detection on a series of images
 ```
-./build/detect build/data/export/reference.jpg $(ls build/data/export/input-*.jpg)
+./build/detect build/data/export/reference.png $(ls build/data/export/input-*.png)
 ```
 
 ### D.3) To display the boxes in a video
@@ -63,7 +63,7 @@ It is possible to generate a video with the detected objects framed by boxes fro
 
 We provide a JSON example `boxes_stdout_example.json` to debug our python program.
 So you can see the result by running the following commands:
-* `python convert_mp4_to_jpg.py` to generate the image folder from the video supplied by default with the project
+* `python convert_mp4_to_png.py` to generate the image folder from the video supplied by default with the project
 * `cat boxes_stdout_example.json | python generate_video.py`
 
 Normally, you should see :
@@ -75,7 +75,7 @@ Normally, you should see :
   
 To generate the video normally from the STDOUT of the binary, you can therefore run the following command :
 ```
-./build/detect build/data/export/reference.jpg $(ls build/data/export/input-*.jpg) | python generate_video.py
+./build/detect build/data/export/reference.png $(ls build/data/export/input-*.png) | python generate_video.py
 ```
 
 If you want to choose the image folder or the path of the exported video, you can read the documentation by running :
@@ -85,5 +85,5 @@ python generate_video.py -h
 
 ### D.4) To run the benchmark
 ```
-./build/bench build/data/export/reference.jpg $(ls build/data/export/input-*.jpg)
+./build/bench build/data/export/reference.png $(ls build/data/export/input-*.png)
 ```
