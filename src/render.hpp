@@ -3,6 +3,7 @@
 #include <memory>
 #include <cstdint>
 #include <vector>
+#include <png.h>
 
 struct rgba8_t {
   std::uint8_t r;
@@ -73,3 +74,16 @@ void closing(char* img_buffer, int width, int height, int stride, int radius, bo
 std::vector<std::vector<int>> bbox(char *img_buffer, int width, int height, int stride, int threshold, int peak);
 
 
+/// \param filename The path to the file
+/// \param file_width A pointer points to file's width
+/// \param file_height A pointer points to file' height
+/// \param file_stride A pointer points to file's stride
+char* read_png(const char*filename, int* file_width, int* file_height, int* file_stride);
+
+
+/// \param buffer The image to change
+/// \param width The image's width
+/// \param height The image's height
+/// \param stride The image's stride
+/// \param filename The path to the file
+void write_png(char* buffer, int width, int height, int stride, const char* filename);

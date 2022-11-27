@@ -93,13 +93,30 @@ __global__ void gpu_difference(char* ref_buffer, int width, int height, size_t r
 
 __global__ void erosion_dilation(char *img_buffer, int width, int height, int img_pitch, int radius, bool is_square, bool is_erosion, char* res_buffer, int res_pitch)
 {
+    // Define shared memory
+
+    extern __shared__ std::uint8_t tile[];
+
+
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
 
     if (x >= width || y >= height)
         return;
 
-    char* base_ptr = img_buffer + y * img_pitch;
+    int base_x = blockDim.x * blockIdx.x;
+    int base_y = blockDim.y * blockIdx.y;
+
+    std::uint8_t* block_ptr = (std::uint8_t*)((img_buffer + (base_x - radius) * sizeof(rgba8_t)) + (base_y - radius) * img_pitch);
+    int base_width = blockDim.x + 2 * radius;
+
+    for (int j = threadIdx.y;  j < base_width; j+= blockDim.y){
+        for (int i = threadIdx.x;  i < base_width; i+= blockDim.x){
+            if (base_x - radius + i >= 0 and base_y - radius + j >= 0 and base_x - radius + i < width and base_y - radius + j < height)
+                tile[i + j * base_width] = block_ptr[i * sizeof(rgba8_t) + j * img_pitch];
+        }
+    }
+    __syncthreads();
 
     std::uint8_t val = (is_erosion) ? 255 : 0;
 
@@ -113,7 +130,8 @@ __global__ void erosion_dilation(char *img_buffer, int width, int height, int im
             // if disc and not in it
             if (!is_square and !((int)sqrtf(i*i + j*j) <= radius))
                 continue;
-            std::uint8_t cell = ((rgba8_t*)(base_ptr + j * img_pitch))[i + x].r;
+
+            std::uint8_t cell = tile[x - base_x + i + radius + (y - base_y + j + radius) * base_width];
             if (is_erosion and val > cell){
                 val = cell;
             }
@@ -367,18 +385,20 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
 
         // perform morphology closing and opening
         // closing
-        erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)closing_radius, false, false, devTmpBuffer, pitchTmp);
-        erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)closing_radius, false, true, devImgBuffer, pitchImg);
+        erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)closing_radius) * (bsize + 2 * (int)closing_radius) * sizeof(std::uint8_t)>>>(devImgBuffer, width, height, pitchImg, (int)closing_radius, false, false, devTmpBuffer, pitchTmp);
+        erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)closing_radius) * (bsize + 2 * (int)closing_radius) * sizeof(std::uint8_t)>>>(devTmpBuffer, width, height, pitchTmp, (int)closing_radius, false, true, devImgBuffer, pitchImg);
         //opening
-        erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)opening_radius, false, true, devTmpBuffer, pitchTmp);
-        erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)opening_radius, false, false, devImgBuffer, pitchImg);
+        erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)opening_radius) * (bsize + 2 * (int)opening_radius) * sizeof(std::uint8_t)>>>(devImgBuffer, width, height, pitchImg, (int)opening_radius, false, true, devTmpBuffer, pitchTmp);
+        erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)opening_radius) * (bsize + 2 * (int)opening_radius) * sizeof(std::uint8_t)>>>(devTmpBuffer, width, height, pitchTmp, (int)opening_radius, false, false, devImgBuffer, pitchImg);
 
         // get histogram of the image
         histogram<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, histoBuffer);
 
         // copy histogram from device to host
         int* histoHostBuffer = (int*)malloc(256 * sizeof(int));
+        // Here is the probleme
         rc = cudaMemcpy(histoHostBuffer, histoBuffer, 256 * sizeof(int), cudaMemcpyDeviceToHost);
+
         if (rc)
             abortError("Unable to copy buffer back to memory");
 

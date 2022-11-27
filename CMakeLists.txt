@@ -19,6 +19,8 @@ FetchContent_Declare(
   URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
   )
 
+
+
 FetchContent_MakeAvailable(spdlog)
 FetchContent_MakeAvailable(CLI11)
 FetchContent_MakeAvailable(json)
@@ -45,7 +47,6 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 
-
 add_library(renderer)
 target_compile_features(renderer PUBLIC cxx_std_14)
 target_link_libraries(renderer PRIVATE spdlog::spdlog)
@@ -66,5 +67,4 @@ target_link_libraries(detect PRIVATE render_cpu_ref PNG::PNG CLI11::CLI11 spdlog
 
 add_executable(bench src/bench.cpp)
 target_compile_features(bench PUBLIC cxx_std_17)
-target_link_libraries(bench PRIVATE render_cpu_ref spdlog::spdlog benchmark::benchmark renderer nlohmann_json::nlohmann_json)
-
+target_link_libraries(bench PRIVATE render_cpu_ref PNG::PNG spdlog::spdlog benchmark::benchmark renderer nlohmann_json::nlohmann_json)
