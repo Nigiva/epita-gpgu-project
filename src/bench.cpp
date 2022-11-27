@@ -30,7 +30,7 @@ void BM_Rendering_gpu(benchmark::State& st)
     char* img_buffer = read_png(images_filename, NULL, NULL, NULL);
 
     for (auto _ : st)
-        render(ref_buffer, width, height, stride, img_buffer);
+        render(ref_buffer, width, height, stride, img_buffer, false);
 
     st.counters["frame_rate"] = benchmark::Counter(st.iterations(), benchmark::Counter::kIsRate);
 }

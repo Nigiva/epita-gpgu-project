@@ -256,6 +256,12 @@ std::vector<std::vector<int>> render_cpu(char* ref_buffer, int width, int height
     int threshold;
     int peak;
     hysteresis(img_buffer, width, height, stride, &threshold, &peak);
+    //min threshold for very similar images
+    if (threshold < 5)
+        threshold = 5;
+    //min peak for very similar images
+    if (peak < 10)
+        peak = 10;
     // get bounding boxes
     return bbox(img_buffer, width, height, stride, threshold, peak);
 }

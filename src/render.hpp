@@ -39,7 +39,8 @@ std::vector<std::vector<int>> render_cpu(char* ref_buffer, int width, int height
 /// \param width Image width
 /// \param height Image height
 /// \param stride Number of bytes between two lines
-std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer);
+/// \param is_baseline if run baseline function or not 
+std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, std::ptrdiff_t stride, char* img_buffer, bool is_baseline);
 
 /// \param buffer The RGBA24 image buffer
 /// \param width Image width
