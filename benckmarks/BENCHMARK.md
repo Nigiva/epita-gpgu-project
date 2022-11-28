@@ -53,34 +53,52 @@ BM_Rendering_gpu/real_time        861 ms          805 ms            1 frame_rate
                     0.00%     361ns         1     361ns     361ns     361ns  cuDeviceGetUuid
 ```
 
+
+## benchmark CPU VS GPU v2
+```
+Run on (8 X 2295.64 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x8)
+  L1 Instruction 64 KiB (x8)
+  L2 Unified 512 KiB (x8)
+  L3 Unified 8192 KiB (x8)
+Load Average: 1.49, 1.23, 0.97
+-------------------------------------------------------------------------------------
+Benchmark                           Time             CPU   Iterations UserCounters...
+-------------------------------------------------------------------------------------
+BM_Rendering_cpu/real_time      47637 ms        47629 ms            1 frame_rate=0.0209922/s
+BM_Rendering_gpu/real_time        852 ms          796 ms            1 frame_rate=1.17344/s
+```
+
 ## Profiling Opti (Output privatizaztion)
 ```
-==814011== Profiling result:
+==2348346== Profiling application: ./detect -m GPU data/export/reference.png data/export/input-0424.png
+==2348346== Profiling result:
             Type  Time(%)      Time     Calls       Avg       Min       Max  Name
- GPU activities:   78.72%  216.08ms         4  54.020ms  17.436ms  97.375ms  erosion_dilation(char*, int, int, int, int, bool, bool, char*, int)
-                   15.79%  43.335ms       334  129.75us  125.25us  138.84us  propagate_relabeling(int*, int, int, bool*, bool, int*)
-                    2.23%  6.1303ms         2  3.0652ms  3.0647ms  3.0656ms  gpu_gaussian_blur(char*, int, int, unsigned long, double*, int, char*, unsigned long)
-                    1.36%  3.7458ms         3  1.2486ms  1.4400us  1.9120ms  [CUDA memcpy HtoD]
-                    0.68%  1.8700ms       340  5.4990us  1.1190us  1.4828ms  [CUDA memcpy DtoH]
-                    0.38%  1.0372ms         1  1.0372ms  1.0372ms  1.0372ms  histogram(char*, int, int, int, int*)
-                    0.37%  1.0266ms         2  513.32us  513.11us  513.52us  gpu_gray_scale(char*, int, int, unsigned long)
-                    0.19%  520.95us         1  520.95us  520.95us  520.95us  gpu_difference(char*, int, int, unsigned long, char*, unsigned long)
-                    0.14%  394.97us       340  1.1610us     896ns  1.6640us  [CUDA memset]
-                    0.06%  172.32us         1  172.32us  172.32us  172.32us  get_bbox(int*, int, int, int*, int*, char*, int)
-                    0.06%  164.83us         1  164.83us  164.83us  164.83us  thresholding(char*, int, int, int, int, int*)
-      API calls:   65.00%  272.58ms       340  801.70us  11.010us  224.76ms  cudaMemcpy
-                   32.45%  136.06ms         3  45.354ms  91.271us  135.63ms  cudaMallocPitch
-                    1.32%  5.5378ms         3  1.8459ms  1.6687ms  1.9860ms  cudaMemcpy2D
-                    0.59%  2.4713ms       346  7.1420us  5.4400us  66.033us  cudaLaunchKernel
-                    0.33%  1.3765ms       340  4.0480us  3.2760us  18.454us  cudaMemset
-                    0.15%  646.58us        10  64.657us  4.9780us  242.43us  cudaFree
-                    0.09%  385.66us         7  55.094us  4.3380us  251.94us  cudaMalloc
-                    0.04%  176.24us       101  1.7440us     169ns  86.110us  cuDeviceGetAttribute
-                    0.02%  99.866us         1  99.866us  99.866us  99.866us  cuDeviceGetName
-                    0.00%  9.0370us         1  9.0370us  9.0370us  9.0370us  cuDeviceGetPCIBusId
-                    0.00%  3.9870us         3  1.3290us     461ns  2.9950us  cuDeviceGetCount
-                    0.00%  1.3430us         5     268ns     181ns     430ns  cudaPeekAtLastError
-                    0.00%  1.0720us         2     536ns     240ns     832ns  cuDeviceGet
-                    0.00%     681ns         1     681ns     681ns     681ns  cuDeviceTotalMem
-                    0.00%     380ns         1     380ns     380ns     380ns  cuDeviceGetUuid
+ GPU activities:   91.84%  224.35ms         4  56.087ms  17.312ms  98.905ms  erosion_dilation(char*, int, int, int, int, bool, bool, char*, int, bool)
+                    2.77%  6.7774ms        42  161.37us  134.14us  349.40us  propagate_relabeling(int*, int, int, bool*, bool, int*)
+                    2.49%  6.0805ms         2  3.0402ms  3.0393ms  3.0411ms  gpu_gaussian_blur(char*, int, int, unsigned long, double*, int, char*, unsigned long)
+                    1.13%  2.7624ms         3  920.79us  1.6000us  1.4272ms  [CUDA memcpy HtoD]
+                    0.56%  1.3562ms        47  28.854us  1.2150us  1.2979ms  [CUDA memcpy DtoH]
+                    0.43%  1.0462ms         1  1.0462ms  1.0462ms  1.0462ms  histogram(char*, int, int, int, int*)
+                    0.42%  1.0179ms         2  508.96us  508.82us  509.11us  gpu_gray_scale(char*, int, int, unsigned long)
+                    0.21%  512.18us         1  512.18us  512.18us  512.18us  gpu_difference(char*, int, int, unsigned long, char*, unsigned long)
+                    0.07%  177.44us         1  177.44us  177.44us  177.44us  get_bbox(int*, int, int, int*, int*, char*, int)
+                    0.07%  165.31us         1  165.31us  165.31us  165.31us  thresholding(char*, int, int, int, int, int*)
+                    0.02%  48.382us        48  1.0070us     959ns  1.2160us  [CUDA memset]
+      API calls:   64.12%  246.96ms        47  5.2545ms  11.661us  232.89ms  cudaMemcpy
+                   34.18%  131.66ms         3  43.886ms  122.10us  131.29ms  cudaMallocPitch
+                    1.19%  4.5783ms         3  1.5261ms  1.4739ms  1.6065ms  cudaMemcpy2D
+                    0.13%  516.29us        10  51.628us  4.4890us  164.86us  cudaFree
+                    0.12%  460.70us        54  8.5310us  5.8610us  41.207us  cudaLaunchKernel
+                    0.09%  344.97us         7  49.280us  4.2280us  209.72us  cudaMalloc
+                    0.06%  246.54us        48  5.1360us  3.9380us  36.357us  cudaMemset
+                    0.06%  242.34us       101  2.3990us     240ns  111.09us  cuDeviceGetAttribute
+                    0.02%  93.025us         1  93.025us  93.025us  93.025us  cuDeviceGetName
+                    0.01%  35.747us         5  7.1490us     210ns  34.785us  cudaPeekAtLastError
+                    0.00%  11.290us         1  11.290us  11.290us  11.290us  cuDeviceGetPCIBusId
+                    0.00%  3.0550us         3  1.0180us     470ns  2.0040us  cuDeviceGetCount
+                    0.00%  1.2910us         2     645ns     450ns     841ns  cuDeviceGet
+                    0.00%     861ns         1     861ns     861ns     861ns  cuDeviceTotalMem
+                    0.00%     521ns         1     521ns     521ns     521ns  cuDeviceGetUuid  
 ```

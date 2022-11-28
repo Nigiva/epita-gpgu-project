@@ -4,7 +4,6 @@
 
 const char* reference_filename = "data/export/reference.png";
 const char* images_filename = "data/export/input-0424.png";
-const char* img_dir = "data/export";
 
 void BM_Rendering_cpu(benchmark::State& st)
 {
@@ -31,11 +30,8 @@ void BM_Rendering_gpu(benchmark::State& st)
     char* ref_buffer = read_png(reference_filename, &width, &height, &stride);
 
     char* img_buffer = read_png(images_filename, NULL, NULL, NULL);
-    for (int i = 0; i < 10; i++)
-    {
-        for (auto _ : st)
-            render(ref_buffer, width, height, stride, img_buffer, false);
-    }
+    for (auto _ : st)
+        render(ref_buffer, width, height, stride, img_buffer, false);
     st.counters["frame_rate"] = benchmark::Counter(st.iterations(), benchmark::Counter::kIsRate);
 }
 
