@@ -85,5 +85,5 @@ python generate_video.py -h
 
 ### D.4) To run the benchmark
 ```
-./build/bench build/data/export/reference.png $(ls build/data/export/input-*.png)
+./build/bench
 ```
