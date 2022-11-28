@@ -20,7 +20,6 @@ int main(int argc, char** argv)
     std::vector<std::string> images_filename;
     std::string mode;
     std::string version;
-
     CLI::App app{"detect"};
     app.add_option("reference", reference_filename, "reference image")->required()->check(CLI::ExistingFile);
     app.add_option("inputs", images_filename, "input images")->required()->check(CLI::ExistingFile);

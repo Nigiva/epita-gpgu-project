@@ -95,7 +95,6 @@ __global__ void erosion_dilation(char *img_buffer, int width, int height, int im
 {
     if (!is_baseline){
         // Define shared memory
-
         extern __shared__ std::uint8_t tile[];
 
 
@@ -146,7 +145,7 @@ __global__ void erosion_dilation(char *img_buffer, int width, int height, int im
         rgba8_t* base_ptr2 = (rgba8_t*)(res_buffer + y * res_pitch);
         base_ptr2[x] = rgba8_t{val, val, val, 255};
     }
-    else{
+    else {
         int x = blockDim.x * blockIdx.x + threadIdx.x;
         int y = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -440,14 +439,13 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
             erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)opening_radius) * (bsize + 2 * (int)opening_radius) * sizeof(std::uint8_t)>>>(devImgBuffer, width, height, pitchImg, (int)opening_radius, false, true, devTmpBuffer, pitchTmp, false);
             erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)opening_radius) * (bsize + 2 * (int)opening_radius) * sizeof(std::uint8_t)>>>(devTmpBuffer, width, height, pitchTmp, (int)opening_radius, false, false, devImgBuffer, pitchImg, false);
         }
-        else{
-            // closing
+        else {
+            //closing
             erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)closing_radius, false, false, devTmpBuffer, pitchTmp, true);
             erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)closing_radius, false, true, devImgBuffer, pitchImg, true);
             //opening
             erosion_dilation<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, (int)opening_radius, false, true, devTmpBuffer, pitchTmp, true);
             erosion_dilation<<<dimGrid, dimBlock>>>(devTmpBuffer, width, height, pitchTmp, (int)opening_radius, false, false, devImgBuffer, pitchImg, true);
-
         }
         // get histogram of the image
         histogram<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, histoBuffer);
@@ -463,6 +461,9 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         // otsu: first threshold
         // (cumpute on Host !)
         int threshold_1 = otsu(width, height, histoHostBuffer);
+        //min threshold for very similar images
+        if (threshold_1 < 5)
+            threshold_1 = 5;
 
         if (threshold_1 < 5)
             threshold_1 = 5;
@@ -477,6 +478,9 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         // otsu: second threshold
         // (cumpute on Host !)
         int threshold_2 = otsu(1, width * height - N, histoHostBuffer);
+        //min threshold for very similar images
+        if (threshold_2 < 10)
+            threshold_2 = 10;
 
         if (threshold_2 < 10)
             threshold_2 = 10;
