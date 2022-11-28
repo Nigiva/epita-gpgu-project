@@ -465,9 +465,6 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         if (threshold_1 < 5)
             threshold_1 = 5;
 
-        if (threshold_1 < 5)
-            threshold_1 = 5;
-
         // puts zeros in the histogram for elements in [0:threshold_1]
         int N = 0;
         for (int i = 0; i <= threshold_1; i++){
@@ -479,9 +476,6 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         // (cumpute on Host !)
         int threshold_2 = otsu(1, width * height - N, histoHostBuffer);
         //min threshold for very similar images
-        if (threshold_2 < 10)
-            threshold_2 = 10;
-
         if (threshold_2 < 10)
             threshold_2 = 10;
 
