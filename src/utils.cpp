@@ -134,6 +134,9 @@ void hysteresis(char* img_buffer, int width, int height, int stride, int* thresh
 
     int* hist = histo(img_buffer, width, height, stride);
     *threshold_1 = otsu(width, height, hist);
+
+    if (*threshold_1 < 5)
+        *threshold_1 = 5;
     int N = 0;
 
     for (int i = 0; i <= *threshold_1; i++){
@@ -142,6 +145,8 @@ void hysteresis(char* img_buffer, int width, int height, int stride, int* thresh
     }
 
     *threshold_2 = otsu(1, width * height - N, hist);
+    if (*threshold_2 < 10)
+        *threshold_2 = 10;
     free(hist);
 
 }

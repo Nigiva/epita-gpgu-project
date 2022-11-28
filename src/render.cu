@@ -214,6 +214,8 @@ __global__ void thresholding(char* img_buffer, int width, int height, int img_pi
 }
 
 __global__ void propagate_relabeling(int* L, int width, int height, bool* is_changed, bool relabeling, int* nb_components){
+
+    __shared__ bool changed;
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -233,18 +235,26 @@ __global__ void propagate_relabeling(int* L, int width, int height, bool* is_cha
     int mid_kernel = 1;
 
     // Propagate
-    for (int i = -mid_kernel; i <= mid_kernel; i++) {
-        for (int j = -mid_kernel; j <= mid_kernel; j++) {
-            if (i + x < 0 or i + x >= width or j + y < 0 or j + y >= height)
-                continue;
-            if (L[(j+y) * width + i+x] == 0)
-                continue;
-            if (L[(j+y) * width + i+x] < L[y * width + x]){
-                L[y * width + x] = L[(j+y) * width + i+x];
-                *is_changed = true;
+    do
+    {
+        changed = false;
+        __syncthreads();
+        // look pixels around
+        for (int i = -mid_kernel; i <= mid_kernel; i++) {
+            for (int j = -mid_kernel; j <= mid_kernel; j++) {
+                if (i + x < 0 or i + x >= width or j + y < 0 or j + y >= height)
+                    continue;
+                if (L[(j+y) * width + i+x] == 0)
+                    continue;
+                if (L[(j+y) * width + i+x] < L[y * width + x]){
+                    L[y * width + x] = L[(j+y) * width + i+x];
+                    *is_changed = true;
+                    changed = true;
+                }
             }
         }
-    }
+        __syncthreads();
+    }while (changed);
 }
 __global__ void get_bbox(int* L, int width, int height, int* max_values, int* bbox, char* img_buffer, int pitch)
 {
@@ -422,8 +432,8 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
 
         // Run optimized version or not
         if (!is_baseline){
-        // perform morphology closing and opening
-        // closing
+            // perform morphology closing and opening
+            // closing
             erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)closing_radius) * (bsize + 2 * (int)closing_radius) * sizeof(std::uint8_t)>>>(devImgBuffer, width, height, pitchImg, (int)closing_radius, false, false, devTmpBuffer, pitchTmp, false);
             erosion_dilation<<<dimGrid, dimBlock, (bsize + 2 * (int)closing_radius) * (bsize + 2 * (int)closing_radius) * sizeof(std::uint8_t)>>>(devTmpBuffer, width, height, pitchTmp, (int)closing_radius, false, true, devImgBuffer, pitchImg, false);
             //opening
@@ -454,6 +464,9 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         // (cumpute on Host !)
         int threshold_1 = otsu(width, height, histoHostBuffer);
 
+        if (threshold_1 < 5)
+            threshold_1 = 5;
+
         // puts zeros in the histogram for elements in [0:threshold_1]
         int N = 0;
         for (int i = 0; i <= threshold_1; i++){
@@ -465,23 +478,28 @@ std::vector<std::vector<int>> render(char* ref_buffer, int width, int height, st
         // (cumpute on Host !)
         int threshold_2 = otsu(1, width * height - N, histoHostBuffer);
 
+        if (threshold_2 < 10)
+            threshold_2 = 10;
+
         free(histoHostBuffer);
+
 
         // apply thresholding
         thresholding<<<dimGrid, dimBlock>>>(devImgBuffer, width, height, pitchImg, threshold_1, L);
 
         // Apply propagate
         bool* is_changed_host = (bool*)malloc(sizeof(bool));
-        rc = cudaMemcpy(is_changed_host, is_changed, sizeof(bool), cudaMemcpyDeviceToHost);
-        if (rc)
-            abortError("Unable to copy buffer back to memory");
+        *is_changed_host = true;
 
+        bool create_comp = false;
         for (int i = 0; i <= 1; i++){
+            create_comp = (bool) i;
             while (*is_changed_host){
                 rc = cudaMemset(is_changed, false, sizeof(bool));
                 if (rc)
                     abortError("Fail buffer allocation");
-                propagate_relabeling<<<dimGrid, dimBlock>>>(L, width, height, is_changed, (bool)i, nb_components);
+                propagate_relabeling<<<dimGrid, dimBlock>>>(L, width, height, is_changed, create_comp, nb_components);
+                create_comp = false;
 
                 rc = cudaMemcpy(is_changed_host, is_changed, sizeof(bool), cudaMemcpyDeviceToHost);
                 if (rc)
